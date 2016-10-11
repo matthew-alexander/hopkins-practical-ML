@@ -1,0 +1,82 @@
+---
+title: 'Practical ML Course Project: Type and Quality of Exercise'
+author: "Matt Alexander"
+date: "October 10, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive Summary
+
+This analysis looks at the 
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The descriptions of the classes from the website: 
+
+"Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E)."
+
+The analysis suggests that 
+
+## Exploring the Data
+
+The following is a summary of the mtcars data set. The key variables I am conserned with are "mpg" and the binary variable "am" -- where the value 0 = automatic transmission and the value 1 = manual transmission.
+
+```{r cars, echo=FALSE}
+data(mtcars)
+summary(mtcars)
+mtcars$am[mtcars$am == 0]<- "Automatic"
+mtcars$am[mtcars$am == 1] <- "Manual"
+```
+
+## Exploring the Motor Trend Dataset
+
+A box plot of the data show a fairly clear relationship between MPG and transmission type. The averages and box plot of the data are shown below: 
+
+The average values for each transmission type: 
+```{r average_mpg}
+aggregate(mpg~am, data = mtcars, mean)
+```
+
+```{r pressure, echo=FALSE}
+boxplot(mtcars$mpg~mtcars$am, col="lightgray", ylab = "MPG", main = "MPG Versus Transmission Type")
+```
+
+## Fitting a Regression Model
+My general strategy for model fitting is to look at the fit of the m=simplest model you can make, and then the most complex model, and then try to remove factors from the most complex model without sacrificing too much R-squared.
+
+Fitting a simple regression using just the relation ship between the MPG and the transmission type: 
+```{r lm_1}
+fit <- lm(mpg~am, data = mtcars)
+summary(fit)
+```
+The R-squared value is low, around 0.36.
+
+Fitting a model with all the variables does a much better job explaining the variance: 
+```{r lm_all}
+fit_all <- lm(mpg~.,data = mtcars)
+summary(fit_all)
+```
+The R-squared in this case is nearly 0.87, a huge improvement. Some of the variables may be highly correlated however, and it is good practice to remove highly correlated variables. 
+```{r cor}
+data(mtcars)
+cor(mtcars)
+```
+For instance, Displacement(disp) and the numbers of cylinders are very related and its probably unneccessary to include both.
+
+Refitting the model with removing displacement yields a good result with nearly the same explanation of variance: 
+
+```{r final_model}
+fit_final <- lm(mpg~. - disp, data = mtcars )
+summary(fit_final)
+```
+## Looking at the Residuals
+```{r residuals}
+par(mfrow = c(2,2))
+plot(fit_final)
+```
+
+
