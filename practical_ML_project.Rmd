@@ -21,31 +21,44 @@ The descriptions of the classes from the website:
 
 The analysis suggests that the quality of the exercise can be predicted by using the sensor data. I experimented with predictive trees, settling on a random forest classifier. It did well predicting (100% acccurate) on the test set.
 
-## Importing and Clearning the Data
+## Importing the Data 
 
-The following is a summary of the data set. The key variables I am conserned with are the 53 "key columns" -- these were chosen by looking at the testing set, and then reducing the variables by the ones that were predominatly NULL or NA. This took the amount of variable from 160 to around 53. 
+The following is a summary of the data set. 
 
 ```{r import, echo=TRUE}
 library(caret)
 library(rpart)
 library(randomForest)
+library(caTools)
 
 setwd("~/GitHub/hopkins-practical-ML")
 train <- read.csv("pml-training.csv",  na.strings=c("NA","#DIV/0!",""))
 test <- read.csv("pml-testing.csv",  na.strings=c("NA","#DIV/0!",""))
-names(train)
+#names(train)
 summary(train$classe)
 
-key_columns <- c(7:11, 37:49, 60:68, 84:86, 102, 113:124, 151:159, 160)
-train_small <- train[,key_columns]
-test_small <- test[,key_columns]
 ```
 
-## Exploring the Dataset
+## Splitting the Dataset
+The training data was split to provide a way to measure the accuracy of the models used to fit the data. The data was split into a train and validation set where 60% of the data went to the train set. 
+```{r split}
+set.seed(2000)
 
+split = sample.split(train$classe, SplitRatio = 0.6)
+train = subset(train, split == TRUE)
+validation = subset(train, split == FALSE)
+```
+## Cleaning the Data
+The key variables I am conserned with are the 53 "key columns" -- these were chosen by looking at the testing set, and then reducing the variables by the ones that were predominatly NULL or NA. This took the amount of variable from 160 to around 53. Each data set (train, validation, test) was reduced this way.
+```{r clean}
+key_columns <- c(7:11, 37:49, 60:68, 84:86, 102, 113:124, 151:159, 160)
+train_small <- train[,key_columns]
+validation_small <- validation[,key_columns]
+test_small <- test[,key_columns]
 
+```
 
-## Fitting a Regression tree
+## Fitting a Regression Tree
 My general strategy for model fitting is to look at the fit of the m=simplest model you can make, and then the most complex model, and then try to remove factors from the most complex model without sacrificing too much R-squared.
 
 Fitting a simple regression using just the relation ship between the MPG and the transmission type: 
@@ -53,22 +66,37 @@ Fitting a simple regression using just the relation ship between the MPG and the
 tree <- rpart(classe ~ ., data=train_small, method="class")
 predictions_tree <- predict(tree, test_small, type = "class")
 ```
-The R-squared value is low, around 0.36.
 
+## Measuring the error on the validation set for basic regression tree
+```{r }
+#table(predictions_tree,validation_small$classe)
+#confusionMatrix(predictions_tree,validation_small$classe)
+```
+The accuracy of the basic tree isn't terrible: around 74%.
+
+* note, if anyone sees this, both the table and the confusion matrix function work in a normal R file, but not in this Knitr file. Any ideas why? 
+
+## Fitting with Random Forest
 Fitting a model with a random forest did much better on the data, due to its averaging process of many trees.
-```{r random-forest}
+```{r }
 rf <- randomForest(classe ~ ., data=train_small, ntree = 200)
 predictions_rf <- predict(rf, test_small)
-```
-The R-squared in this case is nearly 0.87, a huge improvement. Some of the variables may be highly correlated however, and it is good practice to remove highly correlated variables. 
-
-## Predicting on the Test set
-The test set was redduced to the same variables as the training set and predictions were perfomed on the provided test set of 20 cases. 
-```{r prediction}
-
-
 
 ```
+## Measuring the error on the validation set for random forest
+```{r }
+#table(predictions_tree,validation_small$classe)
+#confusionMatrix(predictions_rf, validation_small$classe)
+```
+The accuracy is 1?? Obviously an improvement.  
+
+## Predicting on the test set
+The final step was to use this random forest model on the test set. 
+```{r}
+predictions_rf <- predict(rf, test_small)
+
+```
+
 
 ## Summary
-Classification trees did a fine job preddicting the exercise quality on both the train and test data. Random forests providded a clear improvement over using a standard regression tree using the rpart package.
+Classification trees did a fine job predicting the exercise quality on both the train and test data. Random forests providded a clear improvement over using a standard regression tree using the rpart package.
