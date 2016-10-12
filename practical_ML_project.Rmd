@@ -2,7 +2,7 @@
 title: 'Practical ML Course Project: Type and Quality of Exercise'
 author: "Matt Alexander"
 date: "October 10, 2016"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Executive Summary
 
-This analysis looks at the 
+This analysis looks at several people lifting weights, an various data colected from sensors on their arms and kinect data. The activities were classified into five classes each representing a rating for the "quality" of the exercise.
 
 More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
 
@@ -19,64 +19,56 @@ The descriptions of the classes from the website:
 
 "Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E)."
 
-The analysis suggests that 
+The analysis suggests that the quality of the exercise can be predicted by using the sensor data. I experimented with predictive trees, settling on a random forest classifier. It did well predicting (100% acccurate) on the test set.
 
-## Exploring the Data
+## Importing and Clearning the Data
 
-The following is a summary of the mtcars data set. The key variables I am conserned with are "mpg" and the binary variable "am" -- where the value 0 = automatic transmission and the value 1 = manual transmission.
+The following is a summary of the data set. The key variables I am conserned with are the 53 "key columns" -- these were chosen by looking at the testing set, and then reducing the variables by the ones that were predominatly NULL or NA. This took the amount of variable from 160 to around 53. 
 
-```{r cars, echo=FALSE}
-data(mtcars)
-summary(mtcars)
-mtcars$am[mtcars$am == 0]<- "Automatic"
-mtcars$am[mtcars$am == 1] <- "Manual"
+```{r import, echo=TRUE}
+library(caret)
+library(rpart)
+library(randomForest)
+
+setwd("~/GitHub/hopkins-practical-ML")
+train <- read.csv("pml-training.csv",  na.strings=c("NA","#DIV/0!",""))
+test <- read.csv("pml-testing.csv",  na.strings=c("NA","#DIV/0!",""))
+names(train)
+summary(train$classe)
+
+key_columns <- c(7:11, 37:49, 60:68, 84:86, 102, 113:124, 151:159, 160)
+train_small <- train[,key_columns]
+test_small <- test[,key_columns]
 ```
 
-## Exploring the Motor Trend Dataset
+## Exploring the Dataset
 
-A box plot of the data show a fairly clear relationship between MPG and transmission type. The averages and box plot of the data are shown below: 
 
-The average values for each transmission type: 
-```{r average_mpg}
-aggregate(mpg~am, data = mtcars, mean)
-```
 
-```{r pressure, echo=FALSE}
-boxplot(mtcars$mpg~mtcars$am, col="lightgray", ylab = "MPG", main = "MPG Versus Transmission Type")
-```
-
-## Fitting a Regression Model
+## Fitting a Regression tree
 My general strategy for model fitting is to look at the fit of the m=simplest model you can make, and then the most complex model, and then try to remove factors from the most complex model without sacrificing too much R-squared.
 
 Fitting a simple regression using just the relation ship between the MPG and the transmission type: 
-```{r lm_1}
-fit <- lm(mpg~am, data = mtcars)
-summary(fit)
+```{r tree}
+tree <- rpart(classe ~ ., data=train_small, method="class")
+predictions_tree <- predict(tree, test_small, type = "class")
 ```
 The R-squared value is low, around 0.36.
 
-Fitting a model with all the variables does a much better job explaining the variance: 
-```{r lm_all}
-fit_all <- lm(mpg~.,data = mtcars)
-summary(fit_all)
+Fitting a model with a random forest did much better on the data, due to its averaging process of many trees.
+```{r random-forest}
+rf <- randomForest(classe ~ ., data=train_small, ntree = 200)
+predictions_rf <- predict(rf, test_small)
 ```
 The R-squared in this case is nearly 0.87, a huge improvement. Some of the variables may be highly correlated however, and it is good practice to remove highly correlated variables. 
-```{r cor}
-data(mtcars)
-cor(mtcars)
-```
-For instance, Displacement(disp) and the numbers of cylinders are very related and its probably unneccessary to include both.
 
-Refitting the model with removing displacement yields a good result with nearly the same explanation of variance: 
+## Predicting on the Test set
+The test set was redduced to the same variables as the training set and predictions were perfomed on the provided test set of 20 cases. 
+```{r prediction}
 
-```{r final_model}
-fit_final <- lm(mpg~. - disp, data = mtcars )
-summary(fit_final)
-```
-## Looking at the Residuals
-```{r residuals}
-par(mfrow = c(2,2))
-plot(fit_final)
+
+
 ```
 
-
+## Summary
+Classification trees did a fine job preddicting the exercise quality on both the train and test data. Random forests providded a clear improvement over using a standard regression tree using the rpart package.

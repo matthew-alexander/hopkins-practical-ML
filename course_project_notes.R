@@ -5,8 +5,9 @@ library(randomForest)
 setwd("~/GitHub/hopkins-practical-ML")
 train <- read.csv("pml-training.csv",  na.strings=c("NA","#DIV/0!",""))
 test <- read.csv("pml-testing.csv",  na.strings=c("NA","#DIV/0!",""))
-names(data)
-summary(data$classe)
+names(train)
+summary(train$classe)
+
 # the classe variable is the one to predict on 
 
 carlitos = subset(data, user_name == "carlitos")
@@ -42,5 +43,5 @@ rf <- randomForest(classe ~ ., data=train_small, ntree = 200)
 predictions_rf <- predict(rf, test_small)
 
 #we need a validation set to test on
-confusionMatrix(predictions_tree, test_small$classe)
+confusionMatrix(predictions_tree, test_small)
 
